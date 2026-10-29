@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stem Flow</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <section id="introPanel" hidden><div id="introCount"></div><button id="introPause" type="button" aria-label="Pause tutorial" title="Pause tutorial (Space)">Ⅱ</button><h2 id="introTitle"></h2><div class="intro-demo"><span id="introGesture" role="img" aria-label="Pinch thumb and index finger">🤏</span><span id="introMotion"></span></div><p id="introText"></p><p id="introStatus" role="status"></p><p>Release over Next, then pinch and hold to continue.</p></section>
+  <button id="introNext" type="button" hidden disabled>Next</button>
+  <video id="camera" autoplay muted playsinline></video>
+  <div id="veil"></div>
+
+  <main id="stage">
+    <section class="core" id="core">
+      <div class="ripple"></div>
+      <div>
+        <h1 id="trackName">Vocals</h1>
+        <p id="trackMeta">Volume 80% · FX Off</p>
+      </div>
+    </section>
+  </main>
+
+  <section id="orbs">
+    <article class="mini selected zone-vocals" id="orb-vocals"><h2>Vocals</h2><p>80%</p><small>Volume</small></article>
+    <article class="mini zone-drums" id="orb-drums"><h2>Drums</h2><p>80%</p><small>Volume</small></article>
+    <article class="mini zone-bass" id="orb-bass"><h2>Bass</h2><p>80%</p><small>Volume</small></article>
+    <article class="mini zone-other" id="orb-other"><h2>Other</h2><p>80%</p><small>Volume</small></article>
+  </section>
+
+  <div id="hud">
+    <p class="label">Stem Flow</p>
+    <p class="line" id="stateLine">Preparing camera</p>
+    <p class="line" id="gestureLine">Pinch Off · Open Off</p>
+    <p class="line" id="recordLine">Ready</p>
+  </div>
+
+  <div id="handDot1" class="hand-dot"></div>
+  <div id="handDot2" class="hand-dot hand-two"></div>
+  <button id="helpButton" type="button" hidden>Help</button>
+  <p id="instruction">Allow camera access · press Start · show your hand for 3 seconds</p>
+  <div id="preflight">
+    <section class="menu-card">
+      <div class="menu-copy">
+        <h1>Stem Flow</h1>
+        <template id="helpGuideTemplate">
+        <div class="tutorial-grid" aria-label="Gesture guide">
+          <article class="tutorial-card">
+            <div class="demo-stage demo-select">
+              <span class="demo-orb"></span><span class="demo-orb"></span><span class="demo-orb"></span><span class="demo-orb"></span>
+              <span class="demo-hand" aria-hidden="true">🖐️</span>
+            </div>
+            <h3>Choose Track</h3>
+            <p>Move into a corner to control that stem.</p>
+          </article>
+          <article class="tutorial-card">
+            <div class="demo-stage demo-pinch">
+              <span class="demo-slider"></span><span class="demo-level"></span><span class="demo-hand" aria-hidden="true">🤏</span>
+            </div>
+            <h3>Pinch Volume</h3>
+            <p>Pinch two fingers and move up or down.</p>
+          </article>
+          <article class="tutorial-card">
+            <div class="demo-stage demo-thumb">
+              <span class="demo-orb"></span><span class="demo-orb"></span><span class="demo-orb"></span><span class="demo-orb"></span>
+              <span class="demo-hand" aria-hidden="true">👍</span>
+            </div>
+            <h3>Open FX</h3>
+            <p>Raise your thumb over a track to enter effects.</p>
+          </article>
+          <article class="tutorial-card">
+            <div class="demo-stage demo-fx">
+              <span class="demo-slider"></span><span class="demo-level"></span><span class="demo-hand" aria-hidden="true">🤏</span><span class="keycap">M</span>
+            </div>
+            <h3>Shape FX</h3>
+            <p>Pinch to set Reverb, Delay, or Filter. Thumbs up over Quit to exit. M clears all.</p>
+          </article>
+        </div>
+        <div class="keyboard-guide" aria-label="Keyboard shortcuts">
+          <h3>Keyboard Shortcuts</h3>
+          <div class="shortcut-row">
+            <div class="shortcut"><kbd>Space</kbd><span>Pause or resume</span></div>
+            <div class="shortcut"><kbd>M</kbd><span>Clear all effects</span></div>
+          </div>
+        </div>
+        </template>
+      </div>
+
+      <div class="setup-panel">
+        <fieldset class="session-choice"><legend>Choose a session</legend><label><input id="sessionIntro" name="session" type="radio" value="intro" checked>Intro</label><label><input id="sessionMix" name="session" type="radio" value="mix">Play song</label></fieldset>
+        <div>
+          <p class="panel-title">Setup</p>
+          <div class="check-list">
+            <div class="check"><span>Camera</span><strong id="cameraStatus">waiting</strong></div>
+            <div class="check"><span>Hand model</span><strong id="modelStatus">waiting</strong></div>
+          </div>
+        </div>
+
+        <div>
+          <p class="panel-title">Select Song</p>
+          <select id="songSelect" aria-label="Select song" style="width:100%;padding:12px;border-radius:6px;background:#202124;color:white;border:1px solid #73777c;font:inherit;letter-spacing:0">
+            <option value="hot-mess">Hot Mess</option>
+            <option value="red-light-green-light">Red Light Green Light</option>
+            <option value="lifesaver">Lifesaver</option>
+          </select>
+          <p id="songStatus" role="status">Vocals · Bass · Drums · Other</p>
+          <button id="retrySong" type="button" hidden>Retry audio</button>
+        </div>
+
+        <label class="record-option">
+          <span>Record camera + remix audio after start</span>
+          <input id="recordToggle" type="checkbox">
+        </label>
+        <p id="recordFormatHint" aria-live="polite"></p>
+
+        <div class="menu-actions">
+          <button id="enableButton" class="primary" type="button" hidden>Retry Camera</button>
+          <button id="startButton" type="button" disabled>Start</button>
+        </div>
+        <p id="menuHint">Allow camera access, choose Intro or Play song, then press Start.</p>
+      </div>
+    </section>
+  </div>
+
+  <h2 id="handPrompt" aria-live="polite" hidden>Show your hand to start</h2>
+  <div id="helpOverlay" class="modal-overlay" aria-hidden="true" inert>
+    <section class="modal-card help-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <h2 id="helpTitle">How to Play</h2>
+      <p>Music and recording are paused.</p>
+      <div id="helpGuide"></div>
+      <p>In FX mode, the four circles become Reverb, Delay, Filter and Quit, each one a small screen showing the selected instrument. Reverb is frosted glass: more reverb fogs it up, and droplets wipe clear streaks that slowly fog over again. Delay starts faint, with echo pulses travelling out to the rim on every delay beat; the pattern moves in steps and leaves fading after-images, and at 100% it fills the circle. Filter rolls a soft wall of smoke down from the top, with embers drifting out of it: everything inside it turns soft and muffled; at 100% the whole circle is covered. At 0% each effect circle is empty. Pinch in Quit to return to the tracks.</p>
+      <div class="modal-actions">
+        <button id="helpQuitButton" class="primary" type="button">Quit</button>
+      </div>
+    </section>
+  </div>
+  <div id="pauseOverlay" class="modal-overlay" aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+      <h2 id="pauseTitle">Paused</h2>
+      <p id="pauseDescription">The remix is paused. Continue, restart the song, or end this run.</p>
+      <div class="modal-actions">
+        <button id="continueButton" class="primary" type="button">Continue</button>
+        <button id="skipStepButton" type="button" hidden>Skip this step</button>
+        <button id="skipIntroButton" type="button" hidden>Skip intro &amp; play</button>
+        <button id="restartButton" type="button">Restart</button>
+        <button id="endButton" class="danger" type="button">End</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="endingOverlay" class="modal-overlay" aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="endingTitle">
+      <h2 id="endingTitle">Finished</h2>
+      <p id="endingMessage">Your Stem Flow session is complete.</p>
+      <div class="modal-actions">
+        <button id="endingRestartButton" class="primary" type="button">Restart</button>
+        <button id="closeButton" type="button">Close</button>
+      </div>
+    </section>
+  </div>
+
+    <script src="app.js"></script>
+  <script src="stem-effects.js"></script>
+  <script src="song-library.js"></script>
+  <script src="fx-bank-switch.js"></script>
+  <script src="bootstrap.js"></script>
+  <script src="performance-panel.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stem Flow — FX Listening Test</title>
+<style>body{font:17px system-ui;background:#10151d;color:#e8edf5;max-width:800px;margin:40px auto;padding:0 24px}h1{font-size:32px}p{line-height:1.6;color:#b6c2d4}label{display:block;margin:22px 0 8px}select,button{font:inherit;padding:12px;background:#233047;color:white;border:1px solid #52617a;border-radius:8px}button{cursor:pointer;margin:8px 8px 8px 0}button:disabled{opacity:.45}input[type=range]{width:100%}a{color:#99caff}#status{min-height:3em}output{float:right}fieldset{border:1px solid #52617a;border-radius:12px;margin:24px 0;padding:20px}button[aria-pressed=true]{background:#315da4}</style></head>
+<body><h1>FX listening test</h1><p>v0.2.2 · No camera needed. Listen to one stem, try 50% and 100%, then switch to Dry to compare. These controls use the same effect engine as the game.</p>
+<label for="song">Song</label><select id="song"><option value="hot-mess">Hot Mess</option><option value="red-light-green-light">Red Light Green Light</option><option value="demo">Lifesaver</option></select>
+<label for="stem">Solo stem</label><select id="stem"><option value="vocals">Vocals</option><option value="other">Other / instruments</option><option value="drums">Drums</option><option value="bass">Bass</option></select>
+<p><button id="play">Load and play</button><button id="pause" disabled>Pause</button></p>
+<fieldset><legend>Effect</legend><label for="effect">Choose an effect</label><select id="effect"><option value="chorus">Chorus</option><option value="tremolo">Tremolo</option><option value="distortion">Distortion</option></select>
+<label for="amount">Amount <output id="amountValue">75%</output></label><input id="amount" type="range" min="0" max="100" value="75">
+<button id="dry" aria-pressed="false">Dry / bypass</button><button id="repeat" aria-pressed="false" disabled>Beat Repeat: off</button>
+<p id="hint">Chorus: listen for a wider, moving double voice. Headphones make stereo movement easier to hear.</p></fieldset>
+<label for="volume">Listening volume</label><input id="volume" type="range" min="0" max="100" value="55">
+<p id="status" role="status">Choose a song and stem, then click Load and play.</p><p><a href="index.html">Open the gesture game</a> · In the game, enter FX then press J for the new effects.</p>
+<script src="stem-effects.js"></script><script>
+'use strict';
+const $=id=>document.getElementById(id);
+let ctx,rack,source,master,buffer,started=0,offset=0,playing=false,loadToken=0;
+const hints={chorus:'Chorus: listen for a wider, moving double voice. Headphones make stereo movement easier to hear.',tremolo:'Tremolo: listen for a rhythmic pulse. At 100%, each trough reaches silence.',distortion:'Distortion: listen for grit and extra harmonics. Try vocals, bass or drums.'};
+function report(text){$('status').textContent=text;}
+function position(){return buffer?((playing?ctx.currentTime-started:offset)%buffer.duration):0;}
+function releaseRepeat(){rack?.release();$('repeat').textContent='Beat Repeat: off';$('repeat').setAttribute('aria-pressed','false');}
+function stop(){if(source){source.stop();source.disconnect();source=null;}playing=false;$('pause').disabled=true;$('repeat').disabled=true;}
+function apply(){if(!rack)return;for(const key of ['chorus','tremolo','distortion'])rack.set(key,key===$('effect').value&&$('dry').getAttribute('aria-pressed')!=='true'?Number($('amount').value)/100:0);}
+function update(){ $('amountValue').value=$('amount').value+'%';$('hint').textContent=hints[$('effect').value];apply();}
+async function load(){
+  const token=++loadToken;releaseRepeat();stop();offset=0;buffer=null;
+  if(ctx)await ctx.close();ctx=new AudioContext();await ctx.resume();const context=ctx;
+  $('play').disabled=true;report('Loading selected stem...');
+  try{
+    const song=$('song').value,stem=$('stem').value;
+    const response=await fetch(''+song+'-'+stem+'.mp3');if(!response.ok)throw new Error('Audio file could not be loaded');
+    const decoded=await context.decodeAudioData(await response.arrayBuffer());if(token!==loadToken)return;
+    buffer=decoded;rack=new StemEffectRack(context,{bass:stem==='bass',bpm:{'hot-mess':108,'red-light-green-light':136,demo:120}[song]});rack.buffer=buffer;
+    master=context.createGain();master.gain.value=Number($('volume').value)/100;rack.output.connect(master).connect(context.destination);apply();start();
+  }catch(e){if(token===loadToken)report('Could not start: '+e.message);}
+  finally{if(token===loadToken)$('play').disabled=false;}
+}
+function start(){source=ctx.createBufferSource();source.buffer=buffer;source.loop=true;source.connect(rack.input);started=ctx.currentTime-offset;source.start(0,offset);playing=true;rack.sync(offset);$('pause').disabled=false;$('repeat').disabled=false;$('pause').textContent='Pause';report('Playing '+$('song').selectedOptions[0].text+' / '+$('stem').selectedOptions[0].text+'. Beat Repeat uses a provisional BPM estimate.');}
+$('play').onclick=load;
+for(const key of ['song','stem'])$(key).onchange=()=>{++loadToken;releaseRepeat();stop();buffer=null;rack=null;if(ctx)ctx.suspend();$('play').disabled=false;report('Selection changed. Click Load and play.');};
+$('pause').onclick=async()=>{releaseRepeat();if(playing){offset=position();stop();$('pause').disabled=false;$('pause').textContent='Resume';report('Paused');}else if(buffer){await ctx.resume();start();}};
+$('effect').onchange=update;$('amount').oninput=update;
+$('dry').onclick=()=>{releaseRepeat();const dry=$('dry').getAttribute('aria-pressed')!=='true';$('dry').setAttribute('aria-pressed',String(dry));$('dry').textContent=dry?'Dry active — enable FX':'Dry / bypass';apply();};
+$('volume').oninput=()=>{if(master)master.gain.setTargetAtTime(Number($('volume').value)/100,ctx.currentTime,.035);};
+$('repeat').onclick=async()=>{if(!playing||!rack)return;if(rack.repeat){releaseRepeat();return;}try{$('dry').setAttribute('aria-pressed','false');$('dry').textContent='Dry / bypass';apply();const at=await rack.trigger(async()=>buffer,position,()=>playing);if(at!==null){$('repeat').textContent='Beat Repeat: on — release';$('repeat').setAttribute('aria-pressed','true');}}catch(e){report(e.message);}};
+window.addEventListener('blur',releaseRepeat);document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseRepeat();});
+</script></body></html>

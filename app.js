@@ -53,6 +53,8 @@
     let audioContext;
     let recordingDestination;
     let cameraStream;
+    let screenStream;
+    let startPending = false;
     let mediaRecorder;
     let mediaChunks = [];
     let hands;
@@ -77,9 +79,9 @@
     const startButton = document.getElementById("startButton");
     const recordToggle = document.getElementById("recordToggle");
     const recordingTypes = [
+      'video/webm;codecs=vp8,opus',
       'video/mp4;codecs="avc1.424028,mp4a.40.2"',
       'video/mp4',
-      'video/webm;codecs=vp8,opus',
       'video/webm'
     ];
     const supportedRecordingTypes = typeof MediaRecorder === "undefined" ? [] :
@@ -88,9 +90,11 @@
     recordFormatHint.textContent = supportedRecordingTypes[0]?.startsWith("video/mp4")
       ? "Recording format: MP4"
       : supportedRecordingTypes.length
-        ? "Recording format: WebM. MP4 recording is unavailable in this browser."
+        ? "Recording format: WebM (optimized for browser recording)."
         : "Video recording is unavailable in this browser.";
-    recordToggle.disabled = !supportedRecordingTypes.length;
+    recordToggle.disabled = !supportedRecordingTypes.length || !navigator.mediaDevices?.getDisplayMedia;
+    if (!navigator.mediaDevices?.getDisplayMedia) recordFormatHint.textContent = 'Screen recording is unavailable. Use desktop Chrome or Edge over HTTPS.';
+    else recordFormatHint.textContent += ' Choose this game tab when prompted. Game audio is included automatically.';
     const pauseOverlay = document.getElementById("pauseOverlay");
     const endingOverlay = document.getElementById("endingOverlay");
     const endingMessage = document.getElementById("endingMessage");
@@ -253,10 +257,37 @@
       overlay.setAttribute("aria-hidden", "true");
     }
 
+    function releaseScreenCapture() {
+      const stream = screenStream;
+      screenStream = null;
+      if (stream) stream.getTracks().forEach(track => track.stop());
+    }
+
+    async function prepareScreenRecording() {
+      if (!recordToggle.checked) { releaseScreenCapture(); return; }
+      if (screenStream?.getVideoTracks().some(track => track.readyState === 'live')) return;
+      // Called directly from Start: display capture requires a user gesture.
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 24, max: 30 }, width: { ideal: 1280, max: 1280 }, height: { ideal: 720, max: 720 } },
+        audio: false, preferCurrentTab: true
+      });
+      screenStream = stream;
+      stream.getVideoTracks()[0].addEventListener('ended', () => {
+        if (screenStream !== stream) return;
+        stopPerformanceRecording(true);
+        state.recordPerformance = false;
+        recordToggle.checked = false;
+        recordFormatHint.textContent = 'Screen sharing stopped. Any recorded performance has been saved.';
+        updateUI();
+      }, { once: true });
+    }
+
     function startPerformanceRecording() {
-      if (!state.recordPerformance || !cameraStream || !recordingDestination || typeof MediaRecorder === "undefined") return;
+      if (!state.recordPerformance || !screenStream || !recordingDestination || typeof MediaRecorder === "undefined") return;
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
+      if (!screenStream.getVideoTracks().some(track => track.readyState === 'live')) return;
       const tracksForRecording = [
-        ...cameraStream.getVideoTracks(),
+        ...screenStream.getVideoTracks(),
         ...recordingDestination.stream.getAudioTracks()
       ];
       if (!tracksForRecording.length) return;
@@ -267,7 +298,7 @@
       let recorder;
       for (const mimeType of supportedRecordingTypes) {
         try {
-          recorder = new MediaRecorder(stream, { mimeType });
+          recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000, audioBitsPerSecond: 128000 });
           recorder.start(1000);
           break;
         } catch (error) {
@@ -278,7 +309,7 @@
         state.recordPerformance = false;
         recordToggle.checked = false;
         recordFormatHint.textContent = "Recording could not start. You can still play without recording.";
-        alert("Recording could not start. This session will not be recorded.");
+        releaseScreenCapture();
         return;
       }
       const recordingType = recorder.mimeType.split(";")[0];
@@ -289,7 +320,15 @@
       recorder.ondataavailable = event => {
         if (event.data && event.data.size) chunks.push(event.data);
       };
+      recorder.onerror = () => {
+        if (mediaRecorder !== recorder) return;
+        recordFormatHint.textContent = 'Recording failed. Playing can continue; please retry recording in a new session.';
+        stopPerformanceRecording(true);
+        state.recordPerformance = false; recordToggle.checked = false;
+        updateUI();
+      };
       recorder.onstop = () => {
+        if (mediaRecorder === recorder) { mediaRecorder = null; mediaChunks = []; }
         if (!recorder.shouldSave || !chunks.length) return;
         const blob = new Blob(chunks, { type: recorder.mimeType || recordingType });
         const url = URL.createObjectURL(blob);
@@ -301,7 +340,6 @@
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 60000);
-        mediaChunks = [];
       };
       state.performanceRecording = true;
       state.recordingPaused = false;
@@ -321,13 +359,14 @@
       }
     }
 
-    function stopPerformanceRecording(save = true) {
+    function stopPerformanceRecording(save = true, releaseScreen = true) {
       if (mediaRecorder && mediaRecorder.state !== "inactive") {
         mediaRecorder.shouldSave = save;
         mediaRecorder.stop();
       }
       state.performanceRecording = false;
       state.recordingPaused = false;
+      if (releaseScreen) releaseScreenCapture();
     }
 
     function startMixer() {
@@ -372,10 +411,16 @@
       updateUI();
     }
 
-    function restartGame() {
+    async function restartGame() {
+      if (startPending) return;
+      startPending = true;
+      try { await prepareScreenRecording(); }
+      catch (error) { endingMessage.textContent = 'Screen sharing was cancelled. Click Restart to try again.'; return; }
+      finally { startPending = false; }
+      state.recordPerformance = recordToggle.checked;
       hideOverlay(pauseOverlay);
       hideOverlay(endingOverlay);
-      stopPerformanceRecording(false);
+      stopPerformanceRecording(false, false);
       resetMixState();
       Object.values(players).forEach(player => { player.currentTime = 0; });
       state.phase = "mix";
@@ -406,7 +451,7 @@
       modelStatus.textContent = state.modelReady ? "loaded" : "waiting";
       if (handsStatus) handsStatus.textContent = String(handCount);
       if (poseStatus) poseStatus.textContent = poseText;
-      startButton.disabled = !(state.cameraReady && state.modelReady && songReady);
+      startButton.disabled = startPending || !(state.cameraReady && state.modelReady && songReady);
 
       if (state.phase === "setup") {
         menuHint.textContent = "Allow camera access, choose Intro or Play song, then press Start.";
@@ -2419,8 +2464,7 @@ return {render};
         slot.acc=slot.fxAcc=0;slot.wallFlash=0;slot.clear=null;slot.drops=null;slot.echoes=[];slot.fire=null;slot.fireEcho=null;slot.dEchoes=null;slot.echoPool=null;slot.fmask=null;slot.flen=null;slot.persist=null;slot.snaps=null;slot.lastSnap=-9;slot.clear=null;slot.drops=null;slot.lastHits=stemMotion[key].hits;
       }
       slot.clock+=dt;
-      const box=orbEls[i].getBoundingClientRect();
-      if(kind==='quit'||!box.width)return;
+      if(kind==='quit')return;
       const motion=stemMotion[key],t=motion.time;
       const L=slot.layer.getContext('2d');
       L.setTransform(1,0,0,1,0,0);L.globalAlpha=1;L.globalCompositeOperation='source-over';L.filter='none';
@@ -2622,6 +2666,7 @@ return {render};
     }
 
     let lastVisualTick=null,visualBatch=0;
+    let visualCost=0;
     const lastZoneTick=[null,null,null,null];
     function visualTick(now){
       requestAnimationFrame(visualTick);
@@ -2635,9 +2680,15 @@ return {render};
       lastVisualTick=now;
       const dt=elapsed/1000*(motionPreference.matches?.25:1);
       updateStemMotion(dt,now/1000);materialTime+=dt;
-      const indices=visualBatch++%2 ? [1,3] : [0,2];
-      if(state.mode!=='effects'){renderMaterials(indices);return;}
-      renderMaterials();
+      // Keep UI/control callbacks responsive when drawings or video encoding are expensive.
+      const drawStarted=performance.now();
+      const batchSize=state.performanceRecording || visualCost>6 ? 1 : 2;
+      const order=[0,2,1,3],indices=[];
+      for(let n=0;n<batchSize;n++)indices.push(order[visualBatch++%4]);
+      renderMaterials(indices);
+      if(state.mode!=='effects'){
+        visualCost=visualCost*.8+(performance.now()-drawStarted)*.2;return;
+      }
       for(const i of indices){
         const kind=effectKeys[i],key=tracks[state.effectTrack].key;
         const visualKind={chorus:'reverb',tremolo:'delay',distortion:'filter',beat_repeat:'delay'}[kind] || kind;
@@ -2645,6 +2696,7 @@ return {render};
         lastZoneTick[i]=now;
         renderZone(i,key,visualKind,fxAmount(kind,state.effectTrack),zoneDt);
       }
+      visualCost=visualCost*.8+(performance.now()-drawStarted)*.2;
     }
     requestAnimationFrame(visualTick);
 
@@ -3044,9 +3096,10 @@ return {render};
 
     function renderMaterials(indices=null) {
       document.body.classList.remove("fx-full");
-      const centerBox=core.getBoundingClientRect();
-      // Read layout as one batch before writing canvas and accessible labels.
-      const boxes=materialViews.map(({orb})=>orb.getBoundingClientRect());
+      const fxMode=state.mode==='effects';
+      // FX metadata does not depend on geometry. Main mode reads only scheduled orbs.
+      const centerBox=fxMode?{width:0}:core.getBoundingClientRect();
+      const boxes=fxMode?[]:materialViews.map(({orb},i)=>!indices||indices.includes(i)?orb.getBoundingClientRect():null);
       materialViews.forEach(({orb, ctx}, index) => {
         if(indices && !indices.includes(index))return;
         const fx = state.mode === 'effects';
@@ -3412,7 +3465,7 @@ return {render};
       try {
         menuHint.textContent='Requesting camera permission and loading hand tracking.';
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, max: 30 } },
           audio: false
         });
         cameraStream = stream;
@@ -3550,7 +3603,7 @@ function beginIntro() {
   preflight.classList.add('hidden'); handPrompt.hidden=true;
   state.phase='intro'; intro.active=true; intro.step=0; intro.done=false;
   resetMixState(); tracks.forEach((_,i)=>setVolume(i,i===0?.55:0,false));
-  resetGestureControls(); restartAll(); introRender();
+  resetGestureControls(); restartAll(); startPerformanceRecording(); introRender();
   prepareIntroStep();
 }
 function armSelectedSession() {
@@ -3698,15 +3751,21 @@ function processStableResults(gestures,now) {
 /* END_STEM_INTRO_CONTROLS */
     enableButton.onclick = enableCameraAndAudio;
     startButton.onclick = async () => {
-      if (!audioContext || startButton.disabled) return;
+      if (!audioContext || startButton.disabled || startPending) return;
+      startPending = true;
       startButton.disabled = true;
       try {
+        await prepareScreenRecording();
         await audioContext.resume();
         armSelectedSession();
       } catch (error) {
-        menuHint.textContent = "Audio could not start. Press Start to try again.";
+        releaseScreenCapture();
+        menuHint.textContent = error.name === 'NotAllowedError'
+          ? 'Screen sharing was cancelled. Press Start to choose the game tab, or uncheck recording to play without it.'
+          : 'Session could not start. Check screen sharing and audio, then press Start to retry.';
       } finally {
-        startButton.disabled = !(state.cameraReady && state.modelReady && songReady);
+        startPending = false;
+        startButton.disabled = startPending || !(state.cameraReady && state.modelReady && songReady);
       }
     };
     window.addEventListener('load', () => enableCameraAndAudio(), { once: true });
@@ -3716,6 +3775,7 @@ function processStableResults(gestures,now) {
     document.getElementById('introNext').onclick = advanceIntro;
     recordToggle.onchange = () => {
       state.recordPerformance = recordToggle.checked;
+      if (!recordToggle.checked) stopPerformanceRecording(true);
       updateUI();
     };
     continueButton.onclick = resumeGame;
@@ -3751,7 +3811,7 @@ function processStableResults(gestures,now) {
       if (event.key.toLowerCase() === "e") fadeTo(state.selected, 1);
       if (event.key.toLowerCase() === "m") clearEffects();
       // Recording shortcuts are disabled in this build; functions remain below for future versions.
-      if (event.key.toLowerCase() === "s" && state.phase === 'ready') armSelectedSession();
+      if (event.key.toLowerCase() === "s" && state.phase === 'ready') startButton.click();
       if (event.code === "Space") {
         event.preventDefault();
         state.phase === "paused" ? resumeGame() : pauseGame();

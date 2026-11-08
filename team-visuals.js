@@ -375,10 +375,13 @@ window.StemTeamVisuals={
   if(!Object.hasOwn(factories,kind))return false;
   let entry=instances.get(slot);
   if(!entry||entry.kind!==kind||entry.stem!==stem){
-   entry={kind,stem,time:0,draw:factories[kind]()};instances.set(slot,entry);
+   const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
+   entry={kind,stem,time:0,draw:factories[kind](),canvas,context:canvas.getContext('2d')};instances.set(slot,entry);
   }
   entry.time+=Math.max(0,Math.min(.1,Number.isFinite(dt)?dt:0));
-  ctx.save();try{entry.draw(ctx,Math.max(0,Math.min(1,Number.isFinite(amount)?amount:0)),entry.time);}finally{ctx.restore();}
+  const work=entry.context;work.setTransform(.5,0,0,.5,0,0);work.clearRect(0,0,512,512);
+  work.save();try{entry.draw(work,Math.max(0,Math.min(1,Number.isFinite(amount)?amount:0)),entry.time);}finally{work.restore();}
+  ctx.drawImage(entry.canvas,0,0,512,512);
   return true;
  },
  reset(){instances.clear();}

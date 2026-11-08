@@ -2481,6 +2481,8 @@ return {render};
       if(kind==='volume'){
         instrumentDrawers[key](L,slot,a,t,dt,motion,{});
         drawLayer(slot.layer,.95);
+      } else if(window.StemTeamVisuals?.has(kind)){
+        window.StemTeamVisuals.draw(F,i,kind,key,a,dt);
       } else if(NFX_MOD[kind]){
         // Do not animate invisible FX. Preserve the eased fade-out.
         const fade=Math.min(1,a/.08),fk=fade*fade*(3-2*fade);
@@ -2691,7 +2693,7 @@ return {render};
       }
       for(const i of indices){
         const kind=effectKeys[i],key=tracks[state.effectTrack].key;
-        const visualKind={chorus:'reverb',tremolo:'delay',distortion:'filter',beat_repeat:'delay'}[kind] || kind;
+        const visualKind=kind;
         const zoneDt=lastZoneTick[i]===null?1/30:Math.min(.1,(now-lastZoneTick[i])/1000);
         lastZoneTick[i]=now;
         renderZone(i,key,visualKind,fxAmount(kind,state.effectTrack),zoneDt);

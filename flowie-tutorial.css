@@ -1,0 +1,24 @@
+#flowieTutorial{position:fixed;inset:0;z-index:105;background:#03050b;display:grid;place-items:center;color:#dcecf1;font-family:system-ui,sans-serif}
+#flowieTutorial[hidden]{display:none}
+.tutorial-card-art{position:relative;width:min(100vw,175.1vh);aspect-ratio:1660/948;background:#03050b;overflow:hidden}
+.tutorial-card-art>canvas{display:block;width:100%;height:100%}
+.tutorial-gesture{position:absolute;animation:tutorial-thumb 2.6s infinite;pointer-events:none}
+.tutorial-gesture.pinch{animation:tutorial-pinch 2.7s ease-in-out infinite}
+@keyframes tutorial-pinch{0%,100%{transform:translateY(0)}25%{transform:translateY(-12%)}75%{transform:translateY(12%)}}
+@keyframes tutorial-thumb{0%,20%,100%{transform:scale(1)}6%{transform:scale(.89)}13%{transform:scale(1.04)}}
+.tutorial-value{position:absolute;left:14%;top:38%;font-size:clamp(14px,2vw,28px);font-weight:750;color:#8edbcc;background:#03050b;padding:4px 12px;border-radius:18px}
+.tutorial-value[data-zone=bottom-left]{top:80%}.tutorial-value[data-zone=top-right]{left:72%}.tutorial-value[data-zone=bottom-right]{left:72%;top:80%}
+.tutorial-feedback{position:absolute;left:33%;right:33%;top:87.5%;margin:0;text-align:center;font-size:clamp(11px,1.2vw,18px);line-height:1.35;letter-spacing:0;color:#dcecf1;background:#03050b}
+#flowieTutorial #introNext{position:absolute;inset:auto 1% 5% auto;width:14%;height:7%;min-width:0;border-radius:40px;border:1px solid #b5dce0;color:#fff;background:linear-gradient(to right,#086775 var(--hold,0%),#069eaf var(--hold,0%));font-size:clamp(13px,1.6vw,26px);padding:0;opacity:1}
+#flowieTutorial #introNext:disabled{background:#17252e;color:#7a8c9b;border-color:#344650}
+#flowieTutorial #introPause{position:absolute;top:1.5%;right:.5%;width:4%;height:7%;background:#03050b;color:#dcecf1;border:0;border-radius:50%;font-size:clamp(16px,2vw,28px);padding:0}
+.tutorial-skip{position:absolute;left:1%;top:2%;background:#03050b;color:#b4c9d0;border:1px solid #344650;border-radius:22px;font-size:clamp(11px,1vw,16px);padding:6px 12px;letter-spacing:0}
+body.flowie-tutorial #introPanel,body.flowie-tutorial #handPrompt,body.flowie-tutorial #instruction,body.flowie-tutorial #hud{visibility:hidden}
+body.flowie-tutorial .hand-dot{z-index:130;border:2px solid #079baa;background:#09b4c880;box-shadow:none}
+body.intro-active .modal-overlay.visible{z-index:200}
+.tutorial-preview-nav{position:fixed;bottom:0;left:0;right:0;z-index:140;background:#03050b;padding:8px;display:flex;gap:20px;justify-content:center;font:14px system-ui;color:#dcecf1}
+.tutorial-preview-nav select{padding:5px;font:inherit}.tutorial-preview-nav a{color:#8edbcc}
+body[data-tutorial-preview=true] .tutorial-card-art{width:min(100vw,160vh)}
+@media(prefers-reduced-motion:reduce){.tutorial-gesture{animation:none!important}}
+
+.tutorial-preview-nav select{background:#122028;color:#dcecf1;border:1px solid #344650;border-radius:6px}

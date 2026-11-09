@@ -4,9 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stem Flow</title>
+  <script>
+    if (new URLSearchParams(location.search).get('flowie') !== 'done') {
+      location.replace('flowie-intro.html');
+    }
+  </script>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="flowie-tutorial.css?v=3-dark">
 </head>
 <body>
   
@@ -47,6 +53,7 @@
     <section class="menu-card">
       <div class="menu-copy">
         <h1>Stem Flow</h1>
+        <a href="flowie-intro.html" style="color:inherit">Meet Flowie · Replay intro</a>
         <template id="helpGuideTemplate">
         <div class="tutorial-grid" aria-label="Gesture guide">
           <article class="tutorial-card">
@@ -164,11 +171,12 @@
   </div>
 
     <script src="team-visuals.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20261109-tutorial1"></script>
   <script src="stem-effects.js"></script>
   <script src="song-library.js"></script>
   <script src="fx-bank-switch.js"></script>
   <script src="bootstrap.js"></script>
-  <script src="performance-panel.js"></script>
+  <script src="flowie-tutorial.js?v=3-dark"></script>
+  <script src="performance-panel.js?v=20261109-pinch2"></script>
 </body>
 </html>

@@ -29,7 +29,7 @@
       observeTracking();
       const sorted=frames.slice().sort((a,b)=>a-b),sum=frames.reduce((a,b)=>a+b,0);
       const fps=sum?frames.length*1000/sum:0,p95=sorted[Math.floor(sorted.length*.95)]||0;
-      panel.textContent=`PERFORMANCE · P to close\nDisplay callbacks: ${fps.toFixed(1)}/s · p95 ${p95.toFixed(0)} ms\nVisual JS: ${renderMs.toFixed(0)} ms / interval (${renderCalls} calls)\nTracking latency: ${trackingCalls?(trackingMs/trackingCalls).toFixed(0)+' ms':'waiting'}\nMode: ${state.phase} / ${state.mode}\nTracking includes async wait; GPU cost is not included.`;
+      panel.textContent=`PERFORMANCE · P to close\nDisplay callbacks: ${fps.toFixed(1)}/s · p95 ${p95.toFixed(0)} ms\nVisual JS: ${renderMs.toFixed(0)} ms / interval (${renderCalls} calls)\nTracking latency: ${trackingCalls?(trackingMs/trackingCalls).toFixed(0)+' ms':'waiting'}\nMode: ${state.phase} / ${state.mode}\nHands: ${gestureGate.slots.map((s,i)=>s?`H${i+1} ${s.pinch?'PINCHED':'open'} ratio ${s.pinchRatio.toFixed(2)}`:'').filter(Boolean).join(' · ')||'not detected'}\nGesture: ${fxBankAwaitRelease?'release fingers to unlock FX':dragOwner===null?'no active grab':dragHands[dragOwner]?.key||'grabbing'}\nModel: Lite · tracking target ${state.phase==='ready'?5:24}/s\nTracking includes async wait; GPU cost is not included.`;
       reset();lastReport=now;
     }
     raf=requestAnimationFrame(tick);

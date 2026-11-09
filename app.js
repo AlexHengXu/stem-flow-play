@@ -3097,6 +3097,7 @@ return {render};
     }
 
     function renderMaterials(indices=null) {
+      if(document.body.classList.contains("flowie-tutorial"))return;
       document.body.classList.remove("fx-full");
       const fxMode=state.mode==='effects';
       // FX metadata does not depend on geometry. Main mode reads only scheduled orbs.
@@ -3442,7 +3443,8 @@ return {render};
         updateFades(dt);updatePlayback();
         if(fading)updateUI();
       }
-      if(!['ready','join','mix','intro'].includes(state.phase) || trackingBusy || now-lastTrackingAt<1000/30)return;
+      const trackingInterval=state.phase==='ready'?200:1000/24;
+      if(!['ready','join','mix','intro'].includes(state.phase) || trackingBusy || now-lastTrackingAt<trackingInterval)return;
       if(video.readyState<2 || video.currentTime===lastVideoTime)return;
       lastVideoTime=video.currentTime;lastTrackingAt=now;trackingBusy=true;
       // One inference in flight. Never await it on the control/display loop.
@@ -3484,7 +3486,7 @@ return {render};
         });
         hands.setOptions({
           maxNumHands: 2,
-          modelComplexity: 1,
+          modelComplexity: 0,
           minDetectionConfidence: .5,
           minTrackingConfidence: .5
         });
@@ -3528,7 +3530,13 @@ class StemGestureGate {
     if (!valid.length) { this.reset(); return []; }
     if (this.presentSince === null) this.presentSince = now;
     const remaining = new Set([0,1]), matches = new Map();
-    // Match all existing hands before assigning new slots; detection order may change.
+    // With one continuously visible hand, screen travel is not an identity change.
+    // A fixed distance cutoff dropped an active pinch on fast movement / slow frames.
+    const previousIds=this.slots.map((s,i)=>s?i:null).filter(i=>i!==null);
+    if(valid.length===1 && previousIds.length===1){
+      matches.set(0,previousIds[0]);remaining.delete(previousIds[0]);
+    }
+    // Multiple hands still use nearest-neighbour matching to prevent ownership swaps.
     const pairs = [];
     valid.forEach((g,i) => this.slots.forEach((s,j) => {
       if (s) pairs.push({i,j,d:Math.hypot(g.palmX-s.palmX,g.palmY-s.palmY)});
@@ -3559,7 +3567,7 @@ class StemGestureGate {
       if (s.x<.46) left=true; else if(s.x>.54) left=false;
       if (s.y<.46) top=false; else if(s.y>.54) top=true;
       s.zone=left?(top?0:1):(top?2:3);
-      Object.assign(s,{last:now,palmX:g.palmX,palmY:g.palmY}); this.slots[id]=s;
+      Object.assign(s,{last:now,palmX:g.palmX,palmY:g.palmY,pinchRatio:g.pinchRatio}); this.slots[id]=s;
       return {...g,id,screenX:s.x,handY:s.y,markerScreenX:s.x,markerScreenTop:1-s.y,pinch:s.pinch,thumbFire,zone:s.zone};
     });
   }
@@ -3736,7 +3744,10 @@ function processStableResults(gestures,now) {
   if(!stable.length){intro.nextArmed=false;return;}
   if(fxBankAwaitRelease){
     // A freshly reset debounce gate reports false even if fingers are closed.
-    if(stable.some(g=>g.pinch || g.pinchRatio<.43))return;
+    if(stable.some(g=>g.pinch || g.pinchRatio<.43)){
+      gestureLine.textContent='Release fingers once to use the new FX bank';
+      return;
+    }
     fxBankAwaitRelease=false;
   }
   if(state.phase==='join'){

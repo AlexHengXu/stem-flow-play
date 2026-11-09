@@ -109,7 +109,7 @@ function advance(){
 function finish(){
   if(ended)return;
   ended=true;stopIdle();clearInterval(typing);
-  location.replace('index.html?flowie=done');
+  location.replace('index.html?flowie=done&lesson=1');
 }
 function skip(e){e.stopPropagation();if(ended)return;finishTyping();finish()}
 $('#viewport').addEventListener('click',advance);

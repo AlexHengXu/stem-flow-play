@@ -1,14 +1,14 @@
-#flowieTutorial{position:fixed;inset:0;z-index:105;background:#03050b;display:grid;place-items:center;color:#dcecf1;font-family:system-ui,sans-serif}
+#flowieTutorial{position:fixed;inset:0;z-index:105;background:rgba(3,5,11,.12);display:grid;place-items:center;color:#dcecf1;font-family:system-ui,sans-serif}
 #flowieTutorial[hidden]{display:none}
-.tutorial-card-art{position:relative;width:min(100vw,175.1vh);aspect-ratio:1660/948;background:#03050b;overflow:hidden}
+.tutorial-card-art{position:relative;width:min(100vw,175.1vh);aspect-ratio:1660/948;background:transparent;overflow:hidden}
 .tutorial-card-art>canvas{display:block;width:100%;height:100%}
 .tutorial-gesture{position:absolute;animation:tutorial-thumb 2.6s infinite;pointer-events:none}
 .tutorial-gesture.pinch{animation:tutorial-pinch 2.7s ease-in-out infinite}
 @keyframes tutorial-pinch{0%,100%{transform:translateY(0)}25%{transform:translateY(-12%)}75%{transform:translateY(12%)}}
 @keyframes tutorial-thumb{0%,20%,100%{transform:scale(1)}6%{transform:scale(.89)}13%{transform:scale(1.04)}}
-.tutorial-value{position:absolute;left:14%;top:38%;font-size:clamp(14px,2vw,28px);font-weight:750;color:#8edbcc;background:#03050b;padding:4px 12px;border-radius:18px}
+.tutorial-value{position:absolute;left:14%;top:38%;font-size:clamp(14px,2vw,28px);font-weight:750;color:#8edbcc;background:rgba(3,5,11,.6);padding:4px 12px;border-radius:18px}
 .tutorial-value[data-zone=bottom-left]{top:80%}.tutorial-value[data-zone=top-right]{left:72%}.tutorial-value[data-zone=bottom-right]{left:72%;top:80%}
-.tutorial-feedback{position:absolute;left:33%;right:33%;top:87.5%;margin:0;text-align:center;font-size:clamp(11px,1.2vw,18px);line-height:1.35;letter-spacing:0;color:#dcecf1;background:#03050b}
+.tutorial-feedback{position:absolute;left:33%;right:33%;top:87.5%;margin:0;text-align:center;font-size:clamp(11px,1.2vw,18px);line-height:1.35;letter-spacing:0;color:#dcecf1;background:rgba(3,5,11,.6)}
 #flowieTutorial #introNext{position:absolute;inset:auto 1% 5% auto;width:14%;height:7%;min-width:0;border-radius:40px;border:1px solid #b5dce0;color:#fff;background:linear-gradient(to right,#086775 var(--hold,0%),#069eaf var(--hold,0%));font-size:clamp(13px,1.6vw,26px);padding:0;opacity:1}
 #flowieTutorial #introNext:disabled{background:#17252e;color:#7a8c9b;border-color:#344650}
 #flowieTutorial #introPause{position:absolute;top:1.5%;right:.5%;width:4%;height:7%;background:#03050b;color:#dcecf1;border:0;border-radius:50%;font-size:clamp(16px,2vw,28px);padding:0}
@@ -22,3 +22,15 @@ body[data-tutorial-preview=true] .tutorial-card-art{width:min(100vw,160vh)}
 @media(prefers-reduced-motion:reduce){.tutorial-gesture{animation:none!important}}
 
 .tutorial-preview-nav select{background:#122028;color:#dcecf1;border:1px solid #344650;border-radius:6px}
+
+/* Reuse the game's live camera and veil instead of painting a solid backdrop. */
+body.flowie-tutorial #preflight{visibility:hidden;pointer-events:none}
+.tutorial-welcome{position:absolute;left:33%;right:33%;top:79%;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;z-index:2}
+.tutorial-welcome[hidden]{display:none}
+.tutorial-welcome #songSelect{width:100%!important;padding:6px!important;background:rgba(8,14,20,.78)!important;font-size:clamp(12px,1.1vw,18px)!important}
+.tutorial-welcome button{padding:8px 14px;border:1px solid #8edbcc;border-radius:24px;background:rgba(8,50,55,.85);color:#fff;font-size:clamp(12px,1.1vw,18px);letter-spacing:0;cursor:pointer}
+.tutorial-welcome button:disabled{opacity:.5;cursor:wait}
+body[data-tutorial-preview=true]{background:radial-gradient(ellipse at 25% 30%,#24464b,transparent 60%),radial-gradient(ellipse at 80% 65%,#35334b,transparent 55%),#10151e}
+body[data-tutorial-preview=true] .tutorial-preview-nav{background:rgba(3,5,11,.65)}
+body.flowie-tutorial #stage,body.flowie-tutorial #orbs{visibility:hidden}
+body.flowie-tutorial .tutorial-feedback{top:91%;background:rgba(3,5,11,.55);border-radius:10px;padding:3px}

@@ -2,6 +2,7 @@
    The game remains the sole owner of camera, gesture recognition and audio. */
 (() => {
   const preview=document.body.dataset.tutorialPreview==='true';
+  const onboarding=!preview&&new URLSearchParams(location.search).get('lesson')==='1';
   const shell=document.createElement('section');shell.id='flowieTutorial';shell.hidden=true;
   shell.setAttribute('aria-label','Flowie gesture tutorial');
   shell.innerHTML='<div class="tutorial-card-art"><canvas aria-hidden="true"></canvas><div class="tutorial-gestures"></div><output class="tutorial-value" aria-live="polite"></output><p class="tutorial-feedback" role="status"></p></div>';
@@ -44,23 +45,31 @@
       ctx.fillRect(x,y,w,h);sprites.append(c);
     }
     ctx.fillRect(580,230,500,390);
+    if(page===0&&onboarding)ctx.fillRect(540,760,570,140);
     // Match the game's #03050b background; make baked labels readable on dark.
     const art=ctx.getImageData(0,0,1660,948),d=art.data;
     for(let k=0;k<d.length;k+=4){
       const ink=1-(d[k]*.2126+d[k+1]*.7152+d[k+2]*.0722)/255;
-      d[k]=3+ink*218;d[k+1]=5+ink*233;d[k+2]=11+ink*235;
+      d[k]=221;d[k+1]=238;d[k+2]=246;d[k+3]=Math.round(ink*255);
     }
     ctx.putImageData(art,0,0);ctx.drawImage(bird,580,230);
     canvas.setAttribute('aria-label',titles[page]);
   }
-  let next,pause;
+  let next,pause,welcome;
+  if(onboarding){
+    document.getElementById('sessionIntro').checked=true;
+    welcome=document.createElement('div');welcome.className='tutorial-welcome';
+    for(const id of ['songSelect','startButton','enableButton','retrySong'])welcome.append(document.getElementById(id));
+    card.append(welcome);
+    document.getElementById('startButton').textContent='Begin tutorial';
+  }
   if(!preview){
     next=document.getElementById('introNext');pause=document.getElementById('introPause');card.append(next,pause);
-    const skip=document.createElement('button');skip.className='tutorial-skip';skip.textContent='Skip tutorial';
+    const skip=document.createElement('button');skip.className='tutorial-skip';if(onboarding)skip.hidden=true;skip.textContent='Skip tutorial';
     skip.onclick=()=>{if(state.phase==='join'){selectedSession='mix';sync();return;}if(intro.active){if(state.phase==='intro')pauseGame();skipIntroAll();sync()}};card.append(skip);
   }else{
     const nav=document.createElement('nav');nav.className='tutorial-preview-nav';
-    nav.innerHTML='<label>Preview step <select aria-label="Preview step"></select></label><a href="index.html?flowie=done">Try with camera</a>';
+    nav.innerHTML='<label>Preview step <select aria-label="Preview step"></select></label><a href="index.html?flowie=done&lesson=1">Try with camera</a>';
     document.body.append(nav);const select=nav.querySelector('select');
     titles.forEach((t,i)=>select.add(new Option(`${i}. ${t}`,i)));
     select.onchange=()=>{previewPage=+select.value;sync()};
@@ -68,13 +77,17 @@
   function text(el,s){if(el.textContent!==s)el.textContent=s;}
   function sync(){
     const joining=!preview&&state.phase==='join'&&selectedSession==='intro';
-    const active=preview||joining||(intro.active&&state.phase==='intro');
+    const preparing=onboarding&&['setup','ready'].includes(state.phase);
+    const active=preview||preparing||joining||(intro.active&&state.phase==='intro');
+    if(welcome)welcome.hidden=!preparing;
     shell.hidden=!active;document.body.classList.toggle('flowie-tutorial',active);
     if(!active)return;
-    const page=preview?previewPage:joining?0:intro.step+1;
+    const page=preview?previewPage:(preparing||joining)?0:intro.step+1;
     if(shown!==page){shown=page;loaded=-1;paint(page);}
     else if(loaded!==page)paint(page);
     if(preview){value.hidden=true;text(feedback,'Choose a step below. Select Try with camera for live gesture practice.');return;}
+    if(preparing){next.hidden=true;pause.hidden=true;value.hidden=true;
+      text(feedback,startButton.disabled?menuHint.textContent+' '+songStatus.textContent:'Choose a song, then Begin tutorial.');return;}
     if(joining){next.hidden=true;pause.hidden=true;value.hidden=true;text(feedback,handPrompt.textContent);return;}
     pause.hidden=false;value.hidden=false;
     const key={2:'reverb',3:'delay',4:'filter'}[intro.step];

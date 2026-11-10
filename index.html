@@ -1,19 +1,23 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <style>#preflight{display:none!important}html.booting body>*{visibility:hidden}html.booting,html.booting body{background:#fbf5ef}</style>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stem Flow</title>
   <script>
-    if (new URLSearchParams(location.search).get('flowie') !== 'done') {
+    document.documentElement.classList.add('booting');
+    const entryParams=new URLSearchParams(location.search);
+    if(entryParams.get('flowie')==='done'&&!entryParams.has('lesson')){entryParams.set('lesson','1');history.replaceState(null,'','?'+entryParams);}
+    if (entryParams.get('flowie') !== 'done') {
       location.replace('flowie-intro.html');
     }
   </script>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="flowie-camera.css?v=6-playtest">
-  <link rel="stylesheet" href="flowie-tutorial.css?v=4-overlay">
+  <link rel="stylesheet" href="style.css?v=10-folder">
+  <link rel="stylesheet" href="flowie-camera.css?v=10-folder">
+  <link rel="stylesheet" href="flowie-tutorial.css?v=10-folder">
 </head>
 <body>
   
@@ -119,11 +123,13 @@
           <button id="retrySong" type="button" hidden>Retry audio</button>
         </div>
 
+        <div id="recordingSettings">
         <label class="record-option">
           <span>Record game screen + remix audio</span>
           <input id="recordToggle" type="checkbox">
         </label>
         <p id="recordFormatHint" aria-live="polite"></p>
+        </div>
 
         <div class="menu-actions">
           <button id="enableButton" class="primary" type="button" hidden>Retry Camera</button>
@@ -171,14 +177,15 @@
     </section>
   </div>
 
-    <script src="team-visuals.js"></script>
-    <script src="app.js?v=6-playtest"></script>
-  <script src="stem-effects.js"></script>
-  <script src="song-library.js"></script>
-  <script src="fx-bank-switch.js"></script>
-  <script src="bootstrap.js"></script>
-  <script src="flowie-tutorial.js?v=6-playtest"></script>
-  <script src="flowie-camera.js?v=6-playtest"></script>
-  <script src="performance-panel.js?v=20261109-pinch2"></script>
+    <script src="team-visuals.js?v=10-folder"></script>
+    <script src="app.js?v=10-folder"></script>
+  <script src="stem-effects.js?v=10-folder"></script>
+  <script src="song-library.js?v=10-folder"></script>
+  <script src="fx-bank-switch.js?v=10-folder"></script>
+  <script src="bootstrap.js?v=10-folder"></script>
+  <script src="flowie-tutorial.js?v=10-folder"></script>
+  <script src="flowie-camera.js?v=10-folder"></script>
+  <script src="performance-panel.js?v=10-folder"></script>
+<script>if(new URLSearchParams(location.search).get('flowie')==='done')document.documentElement.classList.remove('booting');</script>
 </body>
 </html>

@@ -2,8 +2,8 @@
 #flowieTutorial[hidden]{display:none}
 .tutorial-card-art{position:relative;width:min(100vw,175.1vh);aspect-ratio:1660/948;background:transparent;overflow:hidden}
 .tutorial-card-art>canvas{display:block;width:100%;height:100%}
-.tutorial-gesture{position:absolute;animation:tutorial-thumb 2.6s infinite;pointer-events:none}
-.tutorial-gesture.pinch{animation:tutorial-pinch 2.7s ease-in-out infinite}
+.tutorial-gesture{position:absolute;pointer-events:none;will-change:transform;transform-origin:50% 50%}
+.tutorial-bird{position:absolute;display:block;object-fit:contain;pointer-events:none;background:transparent}
 @keyframes tutorial-pinch{0%,100%{transform:translateY(0)}25%{transform:translateY(-12%)}75%{transform:translateY(12%)}}
 @keyframes tutorial-thumb{0%,20%,100%{transform:scale(1)}6%{transform:scale(.89)}13%{transform:scale(1.04)}}
 .tutorial-value{position:absolute;left:14%;top:38%;font-size:clamp(14px,2vw,28px);font-weight:750;color:#8edbcc;background:rgba(3,5,11,.6);padding:4px 12px;border-radius:18px}
@@ -34,3 +34,15 @@ body[data-tutorial-preview=true]{background:radial-gradient(ellipse at 25% 30%,#
 body[data-tutorial-preview=true] .tutorial-preview-nav{background:rgba(3,5,11,.65)}
 body.flowie-tutorial #stage,body.flowie-tutorial #orbs{visibility:hidden}
 body.flowie-tutorial .tutorial-feedback{top:91%;background:rgba(3,5,11,.55);border-radius:10px;padding:3px}
+
+/* Recording is available before either tutorial or direct play. */
+.tutorial-recording{position:absolute;left:2%;bottom:3%;width:27%;box-sizing:border-box;padding:12px;border:1px solid #49616b;border-radius:12px;background:rgba(3,5,11,.78);color:#dcecf1;font:clamp(11px,1vw,15px)/1.4 system-ui;text-align:left}
+.tutorial-recording[hidden]{display:none}
+.tutorial-recording .record-option{display:flex;align-items:center;gap:10px;justify-content:space-between;margin:0;font:inherit;letter-spacing:0}
+.tutorial-recording input{width:20px;height:20px;flex-shrink:0;accent-color:#58c8ba;cursor:pointer}
+.tutorial-recording #recordFormatHint{margin:8px 0 0;font:inherit;color:#b4c9d0;letter-spacing:0}
+
+.tutorial-song-title{display:none;position:absolute;top:9%;left:20%;right:20%;margin:0;text-align:center;color:#eaf5f4;font:600 clamp(22px,3vw,42px)/1.3 system-ui}
+.choosing-song .tutorial-song-title{display:block}
+.choosing-song .tutorial-card-art>canvas:first-child,.choosing-song .tutorial-gestures{visibility:hidden}
+body[data-tutorial-preview=true]{margin:0;min-height:100vh}

@@ -12,55 +12,73 @@
   const value=card.querySelector('output'),feedback=card.querySelector('p'),sprites=card.querySelector('.tutorial-gestures');
   const rects=[[[645,616,112,112,'thumb'],[828,616,195,112,'thumb']],[[238,204,150,128,'pinch']],[[303,214,99,108,'thumb']],[[235,214,167,125,'pinch']],[[233,615,166,136,'pinch']],[[1266,215,139,121,'pinch']],[[1238,590,119,133,'thumb']],[[668,605,162,139,'pinch'],[846,591,141,153,'thumb']]];
   const titles=['Show your hand','Vocal volume','Open effects','Try Reverb','Try Delay','Try Filter','Leave effects','Ready to remix'];
+  // Clean, pre-cut artwork (no white matte): a light UI layer for the dark game,
+  // a looping Flowie clip with real alpha, and separate hand sprites.
+  // Bird and hands share one clock (the clip's own time), so they always move together.
+  const OX=548,OY=218,BW=560,BH=400,LOOP=4800,BEAT=2400;
   const images=new Map();let shown=-1,loaded=-1,previewPage=0;
+  // Flowie is a 60-frame sprite atlas (WebP with alpha) drawn on a canvas: works the same in Chrome, Safari, Firefox and Edge.
+  const FW=700,FH=500,FRAMES=60,COLS=10;
+  const bird=document.createElement('canvas');bird.className='tutorial-bird';bird.width=FW;bird.height=FH+60;bird.setAttribute('aria-hidden','true');
+  const bctx=bird.getContext('2d');let atlas=null,atlasPage=-1;const atlases=new Map();
+  // blink: same eyes, colours and timing as the approved prototype (about every 6 s)
+  const EYES=[[[786,351,22,28],[850,326,18,25]],[[779,326,15,24],[844,355,23,28]],[[813,316,17,22]],[[802,327,18,25],[859,351,23,28]],[],[[840,323,16,22]],[],[]];
+  function blink(P,now,fy){if(still)return;const ph=now%5900;if(ph<3500||ph>3720||Math.sin((ph-3500)/220*Math.PI)<.6)return;const k=FW/BW;
+    for(const [x,y,rx,ry] of EYES[P]||[]){const cx=(x-OX)*k,cy=30+(y-OY+fy)*k;bctx.save();bctx.beginPath();bctx.ellipse(cx,cy,(rx+2)*k,(ry+2)*k,0,0,Math.PI*2);bctx.clip();
+      const px=bctx.getImageData(Math.round(cx),Math.round(cy-(ry+7)*k),1,1).data;bctx.fillStyle=px[3]>200?`rgb(${px[0]},${px[1]},${px[2]})`:'#d4fa12';   /* eyelid = the face colour just above the eye */bctx.fillRect(cx-(rx+3)*k,cy-(ry+3)*k,(rx*2+6)*k,(ry*2+6)*k);bctx.beginPath();bctx.moveTo(cx-rx*.65*k,cy);bctx.quadraticCurveTo(cx,cy-ry*.35*k,cx+rx*.65*k,cy);
+      bctx.lineWidth=4*k;bctx.strokeStyle='#1c0865';bctx.lineCap='round';bctx.stroke();bctx.restore();}}
+  function atlasFor(page){if(!atlases.has(page)){const im=new Image();im.decoding='async';im.src=(n=>`${n}`)(`tutorial-bird-${page}.webp`);atlases.set(page,im);}return atlases.get(page);}
+  Object.assign(bird.style,{left:`${OX/16.6}%`,top:`${(OY-30*BW/FW)/9.48}%`,width:`${BW/16.6}%`,height:`${((FH+60)*BW/FW)/9.48}%`});
+  card.insertBefore(bird,sprites);
   function imageAt(page){
-    if(!images.has(page)){const im=new Image();im.src=`tutorial-${page}.png`;images.set(page,im);im.onload=()=>{if(shown===page)paint(page)};im.onerror=()=>{feedback.textContent='Tutorial artwork could not load. Reload to retry.'};}
+    if(!images.has(page)){const im=new Image();im.src=(n=>`${n}`)(`tutorial-ui-${page}.png`);images.set(page,im);im.onload=()=>{if(shown===page)paint(page)};im.onerror=()=>{feedback.textContent='Tutorial artwork could not load. Reload to retry.'};}
     return images.get(page);
   }
-  // Remove only the white matte connected to the sprite edge. Enclosed white
-  // highlights remain intact. Runs on page changes, never in an animation loop.
-  function cutout(im,x,y,w,h){
-    const c=document.createElement('canvas');c.width=w;c.height=h;
-    const cx=c.getContext('2d');cx.drawImage(im,x,y,w,h,0,0,w,h);
-    const pixels=cx.getImageData(0,0,w,h),d=pixels.data,seen=new Uint8Array(w*h),queue=new Int32Array(w*h);let read=0,write=0;
-    function visit(i){if(i<0||i>=w*h||seen[i])return;seen[i]=1;const k=i*4;
-      if(Math.min(d[k],d[k+1],d[k+2])<210)return;queue[write++]=i;d[k+3]=0;}
-    for(let x=0;x<w;x++){visit(x);visit((h-1)*w+x)}
-    for(let y=0;y<h;y++){visit(y*w);visit(y*w+w-1)}
-    while(read<write){const i=queue[read++];if(i%w)visit(i-1);if(i%w<w-1)visit(i+1);visit(i-w);visit(i+w)}
-    cx.putImageData(pixels,0,0);return c;
-  }
+  let hands=[];
   function paint(page){
     const im=imageAt(page);if(!im.complete||!im.naturalWidth)return;
-    loaded=page;ctx.drawImage(im,0,0,1660,948);
-    const bird=cutout(im,580,230,500,390);
-    // Replace the prototype's painted button with the actual gated game control.
-    ctx.fillStyle='#fff';ctx.fillRect(1405,840,255,65);ctx.fillRect(1380,910,280,38);
-    sprites.replaceChildren();
-    for(const [x,y,w,h,kind] of rects[page]){
-      const c=document.createElement('canvas');c.width=w;c.height=h;
-      c.getContext('2d').drawImage(cutout(im,x,y,w,h),0,0);
-      c.className=`tutorial-gesture ${kind}`;
-      Object.assign(c.style,{left:`${x/16.6}%`,top:`${y/9.48}%`,width:`${w/16.6}%`,height:`${h/9.48}%`});
-      ctx.fillRect(x,y,w,h);sprites.append(c);
-    }
-    ctx.fillRect(580,230,500,390);
-    if(page===0&&onboarding)ctx.fillRect(540,760,570,140);
-    // Match the game's #03050b background; make baked labels readable on dark.
-    const art=ctx.getImageData(0,0,1660,948),d=art.data;
-    for(let k=0;k<d.length;k+=4){
-      const ink=1-(d[k]*.2126+d[k+1]*.7152+d[k+2]*.0722)/255;
-      d[k]=221;d[k+1]=238;d[k+2]=246;d[k+3]=Math.round(ink*255);
-    }
-    ctx.putImageData(art,0,0);ctx.drawImage(bird,580,230);
+    loaded=page;ctx.clearRect(0,0,1660,948);ctx.drawImage(im,0,0,1660,948);
+    if(page===0&&onboarding)ctx.clearRect(540,760,570,140);
+    atlas=atlasFor(page);atlasPage=page;atlasFor((page+1)%8);
+    for(const k of [...atlases.keys()])if(k!==page&&k!==(page+1)%8)atlases.delete(k);   // keep memory low
+    sprites.replaceChildren();hands=[];
+    rects[page].forEach(([x,y,w,h,kind],k)=>{
+      const g=new Image();g.src=(n=>`${n}`)(`tutorial-hand-${page}-${k}.png`);g.alt='';g.className=`tutorial-gesture ${kind}`;
+      Object.assign(g.style,{left:`${x/16.6}%`,top:`${y/9.48}%`,width:`${w/16.6}%`,height:`${h/9.48}%`});
+      sprites.append(g);hands.push({el:g,kind,h});
+    });
     canvas.setAttribute('aria-label',titles[page]);
   }
-  let next,pause,welcome;
+  // same motion curves as the approved prototype (bird-gesture-practice v15)
+  const ease=x=>x*x*(3-2*x);
+  const pinchY=ms=>-Math.cos((ms%BEAT)/BEAT*Math.PI*2);
+  function likePress(ms){const p=ms%BEAT;if(p<220)return ease(p/220);if(p<460)return 1-1.3*ease((p-220)/240);if(p<700)return -.3+.3*ease((p-460)/240);return 0;}
+  const startPulse=ms=>.5-.5*Math.cos(ms/BEAT*Math.PI*2);
+  const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let lastMove=0;
+  function moveHands(now){
+    if(!document.hidden&&!shell.hidden&&now-lastMove>40){lastMove=now;
+      const ms=now%LOOP;
+      if(atlas&&atlas.complete&&atlas.naturalWidth){const f=still?0:Math.floor((now%BEAT)/BEAT*FRAMES)%FRAMES;
+        let fy=still?0:Math.sin(ms/LOOP*Math.PI*2)*2;const P=atlasPage;
+        if(!still&&[1,3,4,5,7].includes(P))fy+=pinchY(ms-120)*5;if(!still&&[2,6,7].includes(P))fy+=likePress(ms-60)*5;
+        bctx.clearRect(0,0,FW,FH+60);bctx.drawImage(atlas,(f%COLS)*FW,Math.floor(f/COLS)*FH,FW,FH,0,30+fy*FW/BW,FW,FH);blink(P,now,fy);}
+      for(const g of hands){let t='';
+        if(still){}else if(shown===0)t=`scale(${1+.1*startPulse(ms)})`;
+        else if(g.kind==='pinch')t=`translateY(${pinchY(ms)*22/g.h*100}%)`;
+        else{const p=likePress(ms);t=`translateY(${8*p/g.h*100}%) scale(${1-.1*p})`;}
+        g.el.style.transform=t;}}
+    requestAnimationFrame(moveHands);
+  }
+  requestAnimationFrame(moveHands);
+  let next,pause,welcome,recording;
   if(onboarding){
     document.getElementById('sessionIntro').checked=true;
     welcome=document.createElement('div');welcome.className='tutorial-welcome';
     for(const id of ['songSelect','startButton','enableButton','retrySong'])welcome.append(document.getElementById(id));
     card.append(welcome);
+    const heading=document.createElement('h1');heading.className='tutorial-song-title';heading.textContent='Choose your song';card.append(heading);
+    recording=document.getElementById('recordingSettings');recording.className='tutorial-recording';card.append(recording);
     document.getElementById('startButton').textContent='Begin tutorial';
   }
   if(!preview){
@@ -80,6 +98,8 @@
     const preparing=onboarding&&['setup','ready'].includes(state.phase);
     const active=(preview||preparing||joining||(intro.active&&state.phase==='intro'))&&!window.StemCameraGate?.pending;
     if(welcome)welcome.hidden=!preparing;
+    if(recording)recording.hidden=!preparing;
+    shell.classList.toggle("choosing-song",preparing);
     shell.hidden=!active;document.body.classList.toggle('flowie-tutorial',active);
     if(!active)return;
     const page=preview?previewPage:(preparing||joining)?0:intro.step+1;

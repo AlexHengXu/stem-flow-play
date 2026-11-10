@@ -168,6 +168,8 @@
         const gain = audioContext.createGain();
         const delay = audioContext.createDelay(1.2);
         const feedback = audioContext.createGain();
+        const delayTone = audioContext.createBiquadFilter();
+        delayTone.type="lowpass";delayTone.frequency.value=3800;delayTone.Q.value=0.5;
         const delayWet = audioContext.createGain();
         const reverb = audioContext.createConvolver();
         const reverbWet = audioContext.createGain();
@@ -195,7 +197,8 @@
         gain.connect(audioContext.destination);
         gain.connect(recordingDestination);
         gain.connect(delay);
-        delay.connect(feedback);
+        delay.connect(delayTone);
+        delayTone.connect(feedback);
         feedback.connect(delay);
         delay.connect(delayWet);
         delayWet.connect(audioContext.destination);
@@ -546,9 +549,10 @@
 
       if (effect === "delay") {
         state.delay[index] = amount;
-        nodes.feedback.gain.setTargetAtTime(amount * 0.58, audioContext.currentTime, 0.08);
-        nodes.delayWet.gain.setTargetAtTime(amount * 0.62, audioContext.currentTime, 0.08);
-        nodes.delay.delayTime.setTargetAtTime(0.16 + amount * 0.34, audioContext.currentTime, 0.08);
+        nodes.feedback.gain.setTargetAtTime(amount * 0.45, audioContext.currentTime, 0.08);
+        nodes.delayWet.gain.setTargetAtTime(amount * 0.48, audioContext.currentTime, 0.08);
+        // Keep the 280 ms tap fixed: gesture amount controls wet level and repeats.
+        // Modulating delayTime here causes audible pitch sweeps while dragging.
       }
 
       if (effect === "filter") {

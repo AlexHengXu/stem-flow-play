@@ -2672,7 +2672,7 @@ return {render};
     const lastZoneTick=[null,null,null,null];
     function visualTick(now){
       requestAnimationFrame(visualTick);
-      if(document.hidden || !['mix','intro'].includes(state.phase)){
+      if(document.hidden || document.body.classList.contains('flowie-tutorial') || !['mix','intro'].includes(state.phase)){
         lastVisualTick=null;lastZoneTick.fill(null);return;
       }
       // Two orbs per display callback: each orb still targets 30 Hz on a 60 Hz display.
@@ -3511,7 +3511,7 @@ return {render};
         enableButton.hidden = false;
         enableButton.disabled = false;
         enableButton.textContent = "Retry Camera";
-        menuHint.textContent = "Camera setup failed. Check browser permission and connection, then retry.";
+        menuHint.textContent = error.name==='NotAllowedError' ? 'Camera access was not allowed. Enable it in browser site settings, then try again.' : error.name==='NotFoundError' ? 'No camera was found. Connect a camera, then try again.' : error.name==='NotReadableError' ? 'The camera is busy. Close other camera apps, then try again.' : 'Camera setup failed. Check your connection and browser permissions, then retry.';
         console.warn("Camera setup failed", error);
       } finally {
         cameraSetupBusy = false;
@@ -3781,7 +3781,7 @@ function processStableResults(gestures,now) {
         startButton.disabled = startPending || !(state.cameraReady && state.modelReady && songReady);
       }
     };
-    window.addEventListener('load', () => enableCameraAndAudio(), { once: true });
+    window.addEventListener('load', () => { if(!window.StemCameraGate?.pending)enableCameraAndAudio(); }, { once: true });
     document.getElementById('introPause').onclick = pauseGame;
     document.getElementById('skipStepButton').onclick = skipIntroStep;
     document.getElementById('skipIntroButton').onclick = skipIntroAll;

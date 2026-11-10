@@ -78,7 +78,7 @@
   function sync(){
     const joining=!preview&&state.phase==='join'&&selectedSession==='intro';
     const preparing=onboarding&&['setup','ready'].includes(state.phase);
-    const active=preview||preparing||joining||(intro.active&&state.phase==='intro');
+    const active=(preview||preparing||joining||(intro.active&&state.phase==='intro'))&&!window.StemCameraGate?.pending;
     if(welcome)welcome.hidden=!preparing;
     shell.hidden=!active;document.body.classList.toggle('flowie-tutorial',active);
     if(!active)return;
@@ -87,7 +87,7 @@
     else if(loaded!==page)paint(page);
     if(preview){value.hidden=true;text(feedback,'Choose a step below. Select Try with camera for live gesture practice.');return;}
     if(preparing){next.hidden=true;pause.hidden=true;value.hidden=true;
-      text(feedback,startButton.disabled?menuHint.textContent+' '+songStatus.textContent:'Choose a song, then Begin tutorial.');return;}
+      text(feedback,startButton.disabled?menuHint.textContent+' '+songStatus.textContent:(window.StemCameraGate?.skipPractice?'Choose a song, then Start playing.':'Choose a song, then Begin tutorial.'));return;}
     if(joining){next.hidden=true;pause.hidden=true;value.hidden=true;text(feedback,handPrompt.textContent);return;}
     pause.hidden=false;value.hidden=false;
     const key={2:'reverb',3:'delay',4:'filter'}[intro.step];
@@ -99,6 +99,7 @@
     if(intro.step===6)text(feedback,'Ready! Click Start remix, or release then pinch over it.');
   }
   // DOM updates only, 10Hz; no second inference, audio engine or canvas animation loop.
+  window.StemTutorialRefresh=sync;
   setInterval(()=>{if(!document.hidden)sync()},100);
   sync();
 })();

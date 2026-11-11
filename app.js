@@ -282,7 +282,7 @@
     }
 
     function startPerformanceRecording() {
-      if (!state.recordPerformance || !screenStream || !recordingDestination || typeof MediaRecorder === "undefined") return;
+      if (state.phase !== "mix" || !state.recordPerformance || !screenStream || !recordingDestination || typeof MediaRecorder === "undefined") return;
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         // Skipping a paused tutorial enters the mixer without resumeGame().
         // Continue the same recording instead of leaving it paused forever.
@@ -380,6 +380,7 @@
 
       state.recordPerformance = recordToggle.checked;
       state.phase = "mix";
+      window.StemAmbient?.setStage("game");
       preflight.classList.add("hidden");
       hideOverlay(pauseOverlay);
       hideOverlay(endingOverlay);
@@ -399,6 +400,7 @@
       restartButton.hidden=endButton.hidden=pausedFrom==='intro';
       document.getElementById('pauseDescription').textContent=pausedFrom==='intro'?'Take your time. Continue practicing, skip this step, or go straight to the song.':'Continue, restart the song, or end this run.';
       pauseAll();
+      window.StemAmbient?.setStage("paused");
       pausePerformanceRecording();
       showOverlay(pauseOverlay);
       document.getElementById("instruction").textContent = "Paused";
@@ -411,6 +413,7 @@
       hideOverlay(pauseOverlay);
       resetGestureControls();introRender();
       playAll();
+      window.StemAmbient?.setStage(intro.active?"tutorial":"game");
       resumePerformanceRecording();
       document.getElementById("instruction").textContent = intro.active ? `Intro: ${introSteps[intro.step][0]} · Space pauses` : "Main: pinch volume · thumbs up opens effects · Space pauses · M clears all effects";
       updateUI();
@@ -3619,7 +3622,7 @@ function beginIntro() {
   preflight.classList.add('hidden'); handPrompt.hidden=true;
   state.phase='intro'; intro.active=true; intro.step=0; intro.done=false;
   resetMixState(); tracks.forEach((_,i)=>setVolume(i,i===0?.55:0,false));
-  resetGestureControls(); restartAll(); startPerformanceRecording(); introRender();
+  resetGestureControls(); restartAll(); window.StemAmbient?.setStage("tutorial"); introRender();
   prepareIntroStep();
 }
 function armSelectedSession() {
@@ -3652,7 +3655,7 @@ function advanceIntro() {
 function skipIntroStep() {
   if(!intro.active||state.phase!=='paused')return;
   if(intro.step===6){finishIntro();return;}
-  intro.step++;state.phase='intro';hideOverlay(pauseOverlay);prepareIntroStep();playAll();
+  intro.step++;state.phase='intro';hideOverlay(pauseOverlay);prepareIntroStep();playAll();window.StemAmbient?.setStage('tutorial');
 }
 function skipIntroAll() { if(intro.active&&state.phase==='paused')finishIntro(); }
 function completeIntro() { if(intro.active&&!intro.done){intro.done=true;introRender();} }

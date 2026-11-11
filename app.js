@@ -283,7 +283,12 @@
 
     function startPerformanceRecording() {
       if (!state.recordPerformance || !screenStream || !recordingDestination || typeof MediaRecorder === "undefined") return;
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        // Skipping a paused tutorial enters the mixer without resumeGame().
+        // Continue the same recording instead of leaving it paused forever.
+        if (mediaRecorder.state === 'paused') resumePerformanceRecording();
+        return;
+      }
       if (!screenStream.getVideoTracks().some(track => track.readyState === 'live')) return;
       const tracksForRecording = [
         ...screenStream.getVideoTracks(),

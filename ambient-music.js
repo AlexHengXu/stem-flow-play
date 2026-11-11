@@ -9,11 +9,11 @@
   Object.assign(control.style,{position:'fixed',right:'16px',bottom:'16px',zIndex:'170',padding:'8px 12px',borderRadius:'20px',border:'1px solid #779494',background:'rgba(12,25,31,.8)',color:'#e5f5f4',font:'13px system-ui',cursor:'pointer'});
   document.body.append(control);
   function update(){
-    control.hidden=stage==='game'||stage==='paused';
+    control.hidden=stage!=='welcome';
     control.textContent=muted?'Music off':'Music on';control.setAttribute('aria-label',muted?'Turn background music on':'Turn background music off');
     control.setAttribute('aria-pressed',String(!muted));
-    player.volume=stage==='tutorial'?.025:.16;
-    if(muted||document.hidden||stage==='game'||stage==='paused'){player.pause();return;}
+    player.volume=.16;
+    if(muted||document.hidden||stage!=='welcome'){player.pause();return;}
     if(unlocked)player.play().catch(()=>{});
   }
   function unlock(){unlocked=true;update();}

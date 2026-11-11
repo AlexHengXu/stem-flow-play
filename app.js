@@ -79,19 +79,15 @@
     const startButton = document.getElementById("startButton");
     const recordToggle = document.getElementById("recordToggle");
     const recordingTypes = [
-      'video/webm;codecs=vp8,opus',
       'video/mp4;codecs="avc1.424028,mp4a.40.2"',
-      'video/mp4',
-      'video/webm'
+      'video/mp4'
     ];
     const supportedRecordingTypes = typeof MediaRecorder === "undefined" ? [] :
       recordingTypes.filter(type => MediaRecorder.isTypeSupported(type));
     const recordFormatHint = document.getElementById("recordFormatHint");
-    recordFormatHint.textContent = supportedRecordingTypes[0]?.startsWith("video/mp4")
+    recordFormatHint.textContent = supportedRecordingTypes.length
       ? "Recording format: MP4"
-      : supportedRecordingTypes.length
-        ? "Recording format: WebM (optimized for browser recording)."
-        : "Video recording is unavailable in this browser.";
+      : "MP4 recording is unavailable in this browser. Try an updated Chrome, Edge or Safari. You can still play without recording.";
     recordToggle.disabled = !supportedRecordingTypes.length || !navigator.mediaDevices?.getDisplayMedia;
     if (!navigator.mediaDevices?.getDisplayMedia) recordFormatHint.textContent = 'Screen recording is unavailable. Use desktop Chrome or Edge over HTTPS.';
     else recordFormatHint.textContent += ' Choose this game tab when prompted. Game audio is included automatically.';
@@ -302,6 +298,7 @@
       for (const mimeType of supportedRecordingTypes) {
         try {
           recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000, audioBitsPerSecond: 128000 });
+          if (!recorder.mimeType.toLowerCase().startsWith('video/mp4')) throw new Error('MP4 encoder unavailable');
           recorder.start(1000);
           break;
         } catch (error) {
@@ -311,12 +308,12 @@
       if (!recorder) {
         state.recordPerformance = false;
         recordToggle.checked = false;
-        recordFormatHint.textContent = "Recording could not start. You can still play without recording.";
+        recordFormatHint.textContent = "MP4 recording could not start. Try an updated browser, or play without recording.";
         releaseScreenCapture();
         return;
       }
       const recordingType = recorder.mimeType.split(";")[0];
-      const extension = recordingType === "video/mp4" ? "mp4" : "webm";
+      const extension = "mp4";
       recordFormatHint.textContent = `Recording format: ${extension.toUpperCase()}`;
       recorder.shouldSave = true;
       mediaRecorder = recorder;

@@ -123,13 +123,7 @@
           <button id="retrySong" type="button" hidden>Retry audio</button>
         </div>
 
-        <div id="recordingSettings">
-        <label class="record-option">
-          <span>Record game screen + remix audio</span>
-          <input id="recordToggle" type="checkbox">
-        </label>
-        <p id="recordFormatHint" aria-live="polite"></p>
-        </div>
+
 
         <div class="menu-actions">
           <button id="enableButton" class="primary" type="button" hidden>Retry Camera</button>
@@ -155,6 +149,14 @@
   <div id="pauseOverlay" class="modal-overlay" aria-hidden="true">
     <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
       <h2 id="pauseTitle">Paused</h2>
+      <div id="recordingSettings" hidden>
+        <input id="recordToggle" type="checkbox" hidden aria-hidden="true">
+        <div class="modal-actions">
+        <button id="startRecordingButton" class="primary" type="button">Start recording &amp; continue</button>
+        <button id="stopRecordingButton" type="button" hidden>Stop &amp; save recording</button>
+        </div>
+        <p id="recordFormatHint" aria-live="polite"></p>
+      </div>
       <p id="pauseDescription">The remix is paused. Continue, restart the song, or end this run.</p>
       <div class="modal-actions">
         <button id="continueButton" class="primary" type="button">Continue</button>
@@ -178,15 +180,16 @@
   </div>
 
     <script src="team-visuals.js?v=10-folder"></script>
-    <script src="app.js?v=13-remix-recording"></script>
+    <script src="app.js?v=15-manual-recording"></script>
   <script src="stem-effects.js?v=10-folder"></script>
   <script src="song-library.js?v=10-folder"></script>
   <script src="fx-bank-switch.js?v=10-folder"></script>
   <script src="bootstrap.js?v=10-folder"></script>
-  <script src="flowie-tutorial.js?v=10-folder"></script>
+  <script src="flowie-tutorial.js?v=15-manual-recording"></script>
   <script src="flowie-camera.js?v=10-folder"></script>
   <script src="performance-panel.js?v=10-folder"></script>
 <script>if(new URLSearchParams(location.search).get('flowie')==='done')document.documentElement.classList.remove('booting');</script>
 <script src="ambient-music.js?v=14-silent-tutorial"></script>
+<script src="pause-recording.js?v=15-manual-recording"></script>
 </body>
 </html>

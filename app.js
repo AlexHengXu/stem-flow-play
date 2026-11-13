@@ -268,8 +268,10 @@
       // Called from the pause menu recording button: capture requires a click.
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: { ideal: 24, max: 30 }, width: { ideal: 1280, max: 1280 }, height: { ideal: 720, max: 720 } },
-        audio: false, preferCurrentTab: true
+        audio: false, preferCurrentTab: true, selfBrowserSurface: "include", surfaceSwitching: "exclude"
       });
+      try { window.StemRecordingControls?.validateStream(stream); }
+      catch (error) { stream.getTracks().forEach(track => track.stop()); throw error; }
       screenStream = stream;
       stream.getVideoTracks()[0].addEventListener('ended', () => {
         if (screenStream !== stream) return;
@@ -410,6 +412,8 @@
     function resumeGame() {
       if (state.phase !== "paused") return;
       state.phase = pausedFrom;
+      hideOverlay(helpOverlay);
+      helpOverlay.inert = true;
       hideOverlay(pauseOverlay);
       resetGestureControls();introRender();
       playAll();

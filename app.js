@@ -265,13 +265,11 @@
     async function prepareScreenRecording() {
       if (!recordToggle.checked) { releaseScreenCapture(); return; }
       if (screenStream?.getVideoTracks().some(track => track.readyState === 'live')) return;
-      // Called from the pause menu recording button: capture requires a click.
+      // Called directly from Start: display capture requires a user gesture.
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: { ideal: 24, max: 30 }, width: { ideal: 1280, max: 1280 }, height: { ideal: 720, max: 720 } },
-        audio: false, preferCurrentTab: true, selfBrowserSurface: "include", surfaceSwitching: "exclude"
+        audio: false, preferCurrentTab: true
       });
-      try { window.StemRecordingControls?.validateStream(stream); }
-      catch (error) { stream.getTracks().forEach(track => track.stop()); throw error; }
       screenStream = stream;
       stream.getVideoTracks()[0].addEventListener('ended', () => {
         if (screenStream !== stream) return;
@@ -336,7 +334,6 @@
       };
       recorder.onstop = () => {
         if (mediaRecorder === recorder) { mediaRecorder = null; mediaChunks = []; }
-        window.StemRecordingControls?.refresh();
         if (!recorder.shouldSave || !chunks.length) return;
         const blob = new Blob(chunks, { type: recorder.mimeType || recordingType });
         const url = URL.createObjectURL(blob);
@@ -381,7 +378,7 @@
       if (state.phase !== "setup" && state.phase !== "join") return;
       if (!audioContext) return;
 
-      state.recordPerformance = false;
+      state.recordPerformance = recordToggle.checked;
       state.phase = "mix";
       window.StemAmbient?.setStage("game");
       preflight.classList.add("hidden");
@@ -389,6 +386,7 @@
       hideOverlay(endingOverlay);
       document.getElementById("instruction").textContent = "Main: pinch volume · thumbs up opens effects · Space pauses · M clears all effects";
       restartAll();
+      startPerformanceRecording();
       updateUI();
     }
 
@@ -412,8 +410,6 @@
     function resumeGame() {
       if (state.phase !== "paused") return;
       state.phase = pausedFrom;
-      hideOverlay(helpOverlay);
-      helpOverlay.inert = true;
       hideOverlay(pauseOverlay);
       resetGestureControls();introRender();
       playAll();
@@ -425,15 +421,19 @@
 
     async function restartGame() {
       if (startPending) return;
-      state.recordPerformance = false;
-      recordToggle.checked = false;
+      startPending = true;
+      try { await prepareScreenRecording(); }
+      catch (error) { endingMessage.textContent = 'Screen sharing was cancelled. Click Restart to try again.'; return; }
+      finally { startPending = false; }
+      state.recordPerformance = recordToggle.checked;
       hideOverlay(pauseOverlay);
       hideOverlay(endingOverlay);
-      stopPerformanceRecording(true);
+      stopPerformanceRecording(false, false);
       resetMixState();
       Object.values(players).forEach(player => { player.currentTime = 0; });
       state.phase = "mix";
       playAll();
+      startPerformanceRecording();
       document.getElementById("instruction").textContent = "Main: pinch volume · thumbs up opens effects · Space pauses · M clears all effects";
       updateUI();
     }
@@ -443,7 +443,8 @@
       state.phase = "ended";
       stopAll();
       stopPerformanceRecording();
-      endingMessage.textContent = "Session ended. Any active MP4 recording will download automatically.";
+      const savedFormat = mediaRecorder?.mimeType.startsWith("video/mp4") ? "MP4" : "WebM";
+      endingMessage.textContent = state.recordPerformance ? `Session ended. If recording was active, a ${savedFormat} file will download automatically.` : "Session ended. Restart or close this page.";
       showOverlay(endingOverlay);
       document.getElementById("instruction").textContent = "Finished";
       updateUI();
@@ -3211,8 +3212,6 @@ return {render};
           ? "Recording Ready"
           : "Recording Off";
 
-      window.StemRecordingControls?.refresh();
-
       // Active canvases are rendered only by visualTick, not every gesture update.
       if(!['mix','intro'].includes(state.phase))renderMaterials();
       if (saveButton) saveButton.disabled = !state.events.length;
@@ -3778,13 +3777,14 @@ function processStableResults(gestures,now) {
       startPending = true;
       startButton.disabled = true;
       try {
+        await prepareScreenRecording();
         await audioContext.resume();
         armSelectedSession();
       } catch (error) {
         releaseScreenCapture();
         menuHint.textContent = error.name === 'NotAllowedError'
-          ? 'Audio permission was denied. Press Start to try again.'
-          : 'Session could not start. Check audio, then press Start to retry.';
+          ? 'Screen sharing was cancelled. Press Start to choose the game tab, or uncheck recording to play without it.'
+          : 'Session could not start. Check screen sharing and audio, then press Start to retry.';
       } finally {
         startPending = false;
         startButton.disabled = startPending || !(state.cameraReady && state.modelReady && songReady);
@@ -3795,6 +3795,11 @@ function processStableResults(gestures,now) {
     document.getElementById('skipStepButton').onclick = skipIntroStep;
     document.getElementById('skipIntroButton').onclick = skipIntroAll;
     document.getElementById('introNext').onclick = advanceIntro;
+    recordToggle.onchange = () => {
+      state.recordPerformance = recordToggle.checked;
+      if (!recordToggle.checked) stopPerformanceRecording(true);
+      updateUI();
+    };
     continueButton.onclick = resumeGame;
     helpButton.onclick = openHelp;
     helpQuitButton.onclick = closeHelp;

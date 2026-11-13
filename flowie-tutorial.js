@@ -71,13 +71,14 @@
     requestAnimationFrame(moveHands);
   }
   requestAnimationFrame(moveHands);
-  let next,pause,welcome;
+  let next,pause,welcome,recording;
   if(onboarding){
     document.getElementById('sessionIntro').checked=true;
     welcome=document.createElement('div');welcome.className='tutorial-welcome';
     for(const id of ['songSelect','startButton','enableButton','retrySong'])welcome.append(document.getElementById(id));
     card.append(welcome);
     const heading=document.createElement('h1');heading.className='tutorial-song-title';heading.textContent='Choose your song';card.append(heading);
+    recording=document.getElementById('recordingSettings');recording.className='tutorial-recording';card.append(recording);
     document.getElementById('startButton').textContent='Begin tutorial';
   }
   if(!preview){
@@ -97,6 +98,7 @@
     const preparing=onboarding&&['setup','ready'].includes(state.phase);
     const active=(preview||preparing||joining||(intro.active&&state.phase==='intro'))&&!window.StemCameraGate?.pending;
     if(welcome)welcome.hidden=!preparing;
+    if(recording)recording.hidden=!preparing;
     shell.classList.toggle("choosing-song",preparing);
     shell.hidden=!active;document.body.classList.toggle('flowie-tutorial',active);
     if(!active)return;
